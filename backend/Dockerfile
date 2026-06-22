@@ -11,4 +11,6 @@ RUN playwright install chromium
 
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Render dynamically assigns a port using the PORT environment variable. 
+# We must use 'sh -c' so the variable is evaluated correctly.
+CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}"
