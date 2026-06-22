@@ -3,7 +3,6 @@ import os
 import time
 from playwright.sync_api import sync_playwright
 from analyzer import normalize_price
-from playwright_stealth import stealth_sync
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -35,7 +34,6 @@ def scrape_google_shopping(query: str):
             viewport={'width': 1920, 'height': 1080}
         )
         page = context.new_page()
-        stealth_sync(page)
         
         logging.info(f"Navigating to Google Shopping: {search_url}")
         try:
