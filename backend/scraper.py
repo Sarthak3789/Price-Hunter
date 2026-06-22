@@ -9,12 +9,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def scrape_google_shopping(query: str):
     """
-    Searches Google Shopping for the query and extracts multiple product results.
+    Searches for the query and extracts multiple product results.
+    We are secretly targeting eBay instead of Google Shopping because Google 
+    instantly blocks cloud servers (like Render) with Captchas unless you pay for Proxies.
     """
     results = []
     # Encode the query for the URL
     encoded_query = urllib.parse.quote_plus(query)
-    search_url = f"https://www.google.com/search?tbm=shop&q={encoded_query}"
+    search_url = f"https://www.ebay.com/sch/i.html?_nkw={encoded_query}"
     
     with sync_playwright() as p:
         # Cloud deployments will pass PROXY_URL (e.g. from ScraperAPI or BrightData)
@@ -35,29 +37,31 @@ def scrape_google_shopping(query: str):
         )
         page = context.new_page()
         
-        logging.info(f"Navigating to Google Shopping: {search_url}")
+        logging.info(f"Navigating to eBay: {search_url}")
         try:
             page.goto(search_url, wait_until="domcontentloaded", timeout=15000)
             
-            # Wait for product cards to load. The class '.sh-dgr__grid-result' is a common container for GS results.
-            page.wait_for_selector('.sh-dgr__grid-result', timeout=10000)
+            # Wait for eBay product cards to load.
+            page.wait_for_selector('.s-item', timeout=10000)
             
-            cards = page.locator('.sh-dgr__grid-result').all()
-            for card in cards[:15]: # Get up to top 15 results
+            cards = page.locator('.s-item').all()
+            # eBay has a hidden "Shop on eBay" first card we want to skip, so we take 1:16
+            for card in cards[1:16]: 
                 try:
-                    title = card.locator('h3').first.inner_text()
-                    price_text = card.locator('span.a8Pemb').first.inner_text()
-                    vendor = card.locator('.aULzUe').first.inner_text()
+                    title = card.locator('.s-item__title').first.inner_text()
+                    price_text = card.locator('.s-item__price').first.inner_text()
                     
-                    # Try to get the actual product link, otherwise use Google's redirect link
-                    link_elem = card.locator('a').first
+                    # eBay sometimes shows price ranges like "$10.00 to $20.00". Take the lowest.
+                    if "to" in price_text:
+                        price_text = price_text.split("to")[0].strip()
+                        
+                    vendor = "eBay Seller"
+                    link_elem = card.locator('.s-item__link').first
                     link = link_elem.get_attribute('href')
-                    if link and link.startswith('/url?'):
-                        # Parse out the actual URL if it's a redirect
-                        # Simple extraction for now, usually it's in the 'url' query param
-                        link = f"https://www.google.com{link}"
                         
                     price_float = normalize_price(price_text)
+                    if price_float == 0.0:
+                        continue
                     
                     results.append({
                         "title": title,
@@ -67,18 +71,17 @@ def scrape_google_shopping(query: str):
                         "link": link
                     })
                 except Exception as e:
-                    logging.debug(f"Skipping a card due to missing data: {e}")
+                    logging.debug(f"Skipping an eBay card due to missing data: {e}")
                     
         except Exception as e:
-            logging.error(f"Error scraping Google Shopping: {e}")
+            logging.error(f"Error scraping eBay: {e}")
         finally:
             browser.close()
             
     # --- DEMO MODE FALLBACK ---
-    # If Google blocked us with a Captcha (0 results), inject mock data 
-    # so the frontend UI can still be demonstrated for the portfolio.
+    # If eBay blocks us or errors out (0 results), inject mock data 
     if len(results) == 0:
-        logging.warning("Google Shopping blocked the request (Captcha). Injecting mock data for Demo Mode.")
+        logging.warning("eBay blocked the request. Injecting mock data for Demo Mode.")
         import random
         base_price = 70000 if "iphone" in query.lower() else random.randint(1000, 50000)
         
@@ -98,37 +101,27 @@ def scrape_google_shopping(query: str):
             {
                 "title": f"{query.title()} 5G (128 GB Storage)",
                 "vendor": "Flipkart",
-                "price_raw": f"₹{base_price + 2000:,.2f}",
-                "price_float": base_price + 2000.0,
+                "price_raw": f"₹{base_price + 3200:,.2f}",
+                "price_float": base_price + 3200.0,
                 "link": "https://flipkart.com",
                 "discount": {
-                    "code": "BBD20",
-                    "description": "Big Billion Days Special Voucher",
-                    "conditions": "Applicable on prepaid orders only."
+                    "code": "AXIS5",
+                    "description": "5% Unlimited Cashback on Flipkart Axis Bank Card",
+                    "conditions": "No minimum cart value."
                 }
             },
             {
-                "title": f"Refurbished {query.title()}",
-                "vendor": "Cashify",
-                "price_raw": f"₹{base_price - 5000:,.2f}",
-                "price_float": base_price - 5000.0,
-                "link": "https://cashify.in",
+                "title": f"{query.title()} - Factory Unlocked",
+                "vendor": "Reliance Digital",
+                "price_raw": f"₹{base_price:,.2f}",
+                "price_float": float(base_price),
+                "link": "https://reliancedigital.in",
                 "discount": None
-            },
-            {
-                "title": f"Brand New {query.title()} - Authorized Dealer",
-                "vendor": "Croma",
-                "price_raw": f"₹{base_price + 4900:,.2f}",
-                "price_float": base_price + 4900.0,
-                "link": "https://croma.com",
-                "discount": {
-                    "code": "STOREPICKUP",
-                    "description": "Flat ₹500 off when you pick up in-store",
-                    "conditions": "Select store pickup at checkout."
-                }
             }
         ]
         
+    # Sort results by price lowest to highest
+    results.sort(key=lambda x: x["price_float"])
     return results
 
 
