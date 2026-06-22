@@ -1,0 +1,30 @@
+{
+  "products": [
+    {
+      "name": "Sample Product (e.g., Generic Smartwatch)",
+      "urls": [
+        {
+          "site": "amazon_in",
+          "url": "https://www.amazon.in/dp/B0B5B6PQ6T",
+          "selector": ".a-price-whole"
+        },
+        {
+          "site": "flipkart",
+          "url": "https://www.flipkart.com/noise-colorfit-icon-2-1-8-display-bluetooth-calling-ai-voice-assistant-smartwatch/p/itm2a275466b0d91",
+          "selector": "div.Nx9bqj"
+        },
+        {
+          "site": "meesho",
+          "url": "https://www.meesho.com/smart-watches/p/3o8u1g",
+          "selector": "h4"
+        }
+      ]
+    }
+  ],
+  "telegram": {
+    "bot_token": "<YOUR_TELEGRAM_BOT_TOKEN>",
+    "chat_id": "<YOUR_CHAT_ID>"
+  },
+  "arbitrage_threshold_percent": 10.0,
+  "check_interval_hours": 6
+}
