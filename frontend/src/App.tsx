@@ -11,6 +11,8 @@ const ShinyText = ({ text }: { text: string }) => {
   );
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export default function App() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,7 +34,7 @@ export default function App() {
     if (jobId && loading) {
       interval = setInterval(async () => {
         try {
-          const res = await fetch(`http://localhost:8000/api/results/${jobId}`);
+          const res = await fetch(`${API_BASE_URL}/api/results/${jobId}`);
           if (res.ok) {
             const data = await res.json();
             if (data.status === 'completed') {
@@ -56,7 +58,7 @@ export default function App() {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/api/history/${encodeURIComponent(query)}`);
+      const res = await fetch(`${API_BASE_URL}/api/history/${encodeURIComponent(query)}`);
       const data = await res.json();
       setHistory(data.history || []);
     } catch (e) {
@@ -74,7 +76,7 @@ export default function App() {
     setHistory([]);
 
     try {
-      const res = await fetch('http://localhost:8000/api/search', {
+      const res = await fetch(`${API_BASE_URL}/api/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
@@ -98,7 +100,7 @@ export default function App() {
     e.preventDefault();
     try {
       const endpoint = authMode === 'login' ? '/api/login' : '/api/register';
-      const res = await fetch(`http://localhost:8000${endpoint}`, {
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -131,7 +133,7 @@ export default function App() {
       return;
     }
     try {
-      const res = await fetch('http://localhost:8000/api/track', {
+      const res = await fetch(`${API_BASE_URL}/api/track`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
